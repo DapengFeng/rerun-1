@@ -2726,6 +2726,7 @@
 <a href="#2726" id="2726">2726</a>
 <a href="#2727" id="2727">2727</a>
 <a href="#2728" id="2728">2728</a>
+<a href="#2729" id="2729">2729</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::BTreeSet,
     sync::{
@@ -3586,9 +3587,10 @@
             </span>Retrofilled(UnitChunkShared),
         }
 
-        <span class="comment">// That's a synchronous lock, so make sure we barely lock it.
-        </span><span class="kw">let </span>state = <span class="self">self</span>.init_(store, cache);
-        <span class="kw">let </span>state = <span class="self">self</span>.state.get_or_init(<span class="kw">move </span>|| state);
+        <span class="comment">// Although that's a synchronous lock, we probably don't need to worry about it until
+        // there is proof to the contrary: we are in a specific `QueryHandle` after all, there's
+        // really no good reason to be contending here in the first place.
+        </span><span class="kw">let </span>state = <span class="self">self</span>.state.get_or_init(<span class="kw">move </span>|| <span class="self">self</span>.init_(store, cache));
 
         <span class="kw">let </span>row_idx = state.cur_row.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
         <span class="kw">let </span>cur_index_value = state.unique_index_values.get(row_idx <span class="kw">as </span>usize)<span class="question-mark">?</span>;
