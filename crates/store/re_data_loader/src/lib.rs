@@ -64,6 +64,12 @@ pub struct DataLoaderSettings {
     /// The [`re_log_types::StoreId`] that is currently opened in the viewer, if any.
     pub opened_store_id: Option<re_log_types::StoreId>,
 
+    /// Whether `SetStoreInfo`s should be sent, regardless of the surround context.
+    ///
+    /// Only useful when creating a recording just-in-time directly in the viewer (which is what
+    /// happens when importing things into the welcome screen).
+    pub force_store_info: bool,
+
     /// What should the logged entity paths be prefixed with?
     pub entity_path_prefix: Option<EntityPath>,
 
@@ -79,6 +85,7 @@ impl DataLoaderSettings {
             opened_application_id: Default::default(),
             store_id: store_id.into(),
             opened_store_id: Default::default(),
+            force_store_info: false,
             entity_path_prefix: Default::default(),
             timepoint: Default::default(),
         }
@@ -91,6 +98,7 @@ impl DataLoaderSettings {
             opened_application_id,
             store_id,
             opened_store_id,
+            force_store_info: _,
             entity_path_prefix,
             timepoint,
         } = self;

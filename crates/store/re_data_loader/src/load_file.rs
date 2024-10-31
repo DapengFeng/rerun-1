@@ -308,9 +308,13 @@ pub(crate) fn send(
 
             for (store_id, store_info_already_created) in store_info_tracker {
                 let is_a_preexisting_recording =
-                    Some(&store_id) == settings.opened_store_id.as_ref();
+                    dbg!(Some(&store_id)) == dbg!(settings.opened_store_id.as_ref());
 
-                if store_info_already_created || is_a_preexisting_recording {
+                dbg!((store_info_already_created, is_a_preexisting_recording));
+
+                if !settings.force_store_info
+                    && (store_info_already_created || is_a_preexisting_recording)
+                {
                     continue;
                 }
 

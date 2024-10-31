@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use itertools::Itertools;
 use re_build_info::CrateVersion;
 use re_data_source::{DataSource, FileContents};
 use re_entity_db::entity_db::EntityDb;
@@ -573,17 +574,33 @@ impl App {
         store_context: Option<&StoreContext<'_>>,
         cmd: UICommand,
     ) {
-        let active_application_id = store_context
-            .and_then(|ctx| {
-                ctx.hub
-                    .active_app()
-                    // Don't redirect data to the welcome screen.
-                    .filter(|&app_id| app_id != &StoreHub::welcome_screen_app_id())
-            })
-            .cloned();
+        let mut force_store_info = false;
+        let active_application_id = store_context.and_then(|ctx| {
+            ctx.hub
+                .active_app()
+                // Don't redirect data to the welcome screen.
+                .filter(|&app_id| app_id != &StoreHub::welcome_screen_app_id())
+                .cloned()
+        });
         let active_recording_id = store_context
-            .and_then(|ctx| ctx.hub.active_recording_id())
-            .cloned();
+            .and_then(|ctx| ctx.hub.active_recording_id().cloned())
+            .or_else(|| {
+                // When we're on the welcome screen, there is no recording ID to recommend.
+                // But we want one, otherwise multiple things being dropped simultaneously on the
+                // welcome screen would end up in different recordings!
+
+                // We're creating a recording just-in-time, directly from the viewer.
+                // We need those those store infos or the data will just be silently ignored.
+                force_store_info = true;
+
+                // NOTE: We don't override blueprints' store IDs anyhow, so it is sound to assume that
+                // this can only be a recording.
+                Some(re_log_types::StoreId::random(StoreKind::Recording))
+            });
+
+        // TODO: we need to detect when drag-n-dropping multiple files at once on a welcome screen
+        // and create an appropriate app-id, somehow, otherwise we'll end up creating empty apps
+        // and everything will become very messy
 
         match cmd {
             UICommand::SaveRecording => {
@@ -615,6 +632,7 @@ impl App {
                             FileSource::FileDialog {
                                 recommended_application_id: None,
                                 recommended_recording_id: None,
+                                force_store_info,
                             },
                             file_path,
                         )));
@@ -642,12 +660,33 @@ impl App {
 
             #[cfg(not(target_arch = "wasm32"))]
             UICommand::Import => {
-                for file_path in open_file_dialog_native() {
+                let file_paths = open_file_dialog_native();
+
+                let active_application_id = active_application_id.clone().or_else(|| {
+                    if file_paths.len() > 1 {
+                        // TODO: come up with a nice compound name
+                        Some(
+                            file_paths
+                                .iter()
+                                .map(|p| p.to_string_lossy().to_string())
+                                .collect_vec()
+                                .join("|")
+                                .into(),
+                        )
+                    } else {
+                        file_paths
+                            .first()
+                            .map(|p| p.to_string_lossy().to_string().into())
+                    }
+                });
+
+                for file_path in file_paths {
                     self.command_sender
                         .send_system(SystemCommand::LoadDataSource(DataSource::FilePath(
                             FileSource::FileDialog {
                                 recommended_application_id: active_application_id.clone(),
                                 recommended_recording_id: active_recording_id.clone(),
+                                force_store_info,
                             },
                             file_path,
                         )));
@@ -660,6 +699,8 @@ impl App {
                 // Import: we want to try and load into the current recording.
                 let recommended_application_id = active_application_id;
                 let recommended_recording_id = active_recording_id;
+
+                // TODO: how do we even know if we have multiple files?
 
                 let promise = poll_promise::Promise::spawn_local(async move {
                     let file = async_open_rrd_dialog().await;
@@ -1364,17 +1405,32 @@ impl App {
             return;
         }
 
-        let active_application_id = store_ctx
-            .and_then(|ctx| {
-                ctx.hub
-                    .active_app()
-                    // Don't redirect data to the welcome screen.
-                    .filter(|&app_id| app_id != &StoreHub::welcome_screen_app_id())
-            })
-            .cloned();
+        let mut force_store_info = false;
+        let active_application_id = store_ctx.and_then(|ctx| {
+            ctx.hub
+                .active_app()
+                // Don't redirect data to the welcome screen.
+                .filter(|&app_id| app_id != &StoreHub::welcome_screen_app_id())
+                .cloned()
+        });
         let active_recording_id = store_ctx
-            .and_then(|ctx| ctx.hub.active_recording_id())
-            .cloned();
+            .and_then(|ctx| ctx.hub.active_recording_id().cloned())
+            .or_else(|| {
+                // When we're on the welcome screen, there is no recording ID to recommend.
+                // But we want one, otherwise multiple things being dropped simultaneously on the
+                // welcome screen would end up in different recordings!
+
+                // We're creating a recording just-in-time, directly from the viewer.
+                // We need those those store infos or the data will just be silently ignored.
+                force_store_info = true;
+
+                // NOTE: We don't override blueprints' store IDs anyhow, so it is sound to assume that
+                // this can only be a recording.
+                Some(re_log_types::StoreId::random(StoreKind::Recording))
+            });
+
+        // TODO: same shenanigans below -- we need to detect when drag-n-dropping multiple files at
+        // once on a welcome screen and create an appropriate app-id, somehow
 
         for file in dropped_files {
             if let Some(bytes) = file.bytes {
@@ -1384,6 +1440,7 @@ impl App {
                         FileSource::DragAndDrop {
                             recommended_application_id: active_application_id.clone(),
                             recommended_recording_id: active_recording_id.clone(),
+                            force_store_info,
                         },
                         FileContents {
                             name: file.name.clone(),
@@ -1400,6 +1457,7 @@ impl App {
                     FileSource::DragAndDrop {
                         recommended_application_id: active_application_id.clone(),
                         recommended_recording_id: active_recording_id.clone(),
+                        force_store_info,
                     },
                     path,
                 )));
