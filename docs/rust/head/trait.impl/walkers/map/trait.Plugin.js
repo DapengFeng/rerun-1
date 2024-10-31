@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"re_space_view_map":[["impl Plugin for <a class=\"struct\" href=\"re_space_view_map/visualizers/geo_points/struct.GeoPointsPlugin.html\" title=\"struct re_space_view_map::visualizers::geo_points::GeoPointsPlugin\">GeoPointsPlugin</a>&lt;'_&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

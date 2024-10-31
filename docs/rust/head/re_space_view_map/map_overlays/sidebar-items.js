@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MIN_MAP_SIZE_FOR_ZOOM_BUTTONS","MIN_MAP_SIZE_FOR_ZOOM_BUTTONS_FADE"],"fn":["acknowledgement_overlay","zoom_buttons_overlay"]};

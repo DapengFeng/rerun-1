@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["update_picked_instance"],"mod":["geo_points"],"struct":["GeoSpan","PickedInstance"]};
